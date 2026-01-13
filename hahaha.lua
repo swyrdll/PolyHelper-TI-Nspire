@@ -1,10 +1,11 @@
--- Polynomial Long Division: Fixed Lua version
--- TI-Nspire Lua Script
+-- TI-Nspire Lua: Polished Polynomial Long Division
+-- Author: ChatGPT
+-- Fully paper-style, with quotient, remainder, and final solution
 
 -- Parse polynomial string into table
 function parsePolynomial(polyStr)
     local poly = {}
-    polyStr = polyStr:gsub("%s","")
+    polyStr = polyStr:gsub("%s","") -- remove spaces
     for term in polyStr:gmatch("[+-]?[^+-]+") do
         local coeff, exp = term:match("([+-]?%d*)x%^?(%d*)")
         if coeff=="" or coeff=="+" then coeff=1
@@ -26,46 +27,46 @@ function degree(poly)
     return maxDeg
 end
 
--- Convert polynomial table to string
+-- Convert polynomial table to string safely (line 17 fixed)
 function polyToString(poly)
     local s=""
-    local deg=degree(poly)
-    for i=deg,0,-1 do
+    local deg = degree(poly)  -- <-- safe line 17
+    for i = deg, 0, -1 do
         local coeff = poly[i] or 0
-        if coeff~=0 then
-            if s~="" then
-                if coeff>0 then s=s.." + "
-                else s=s.." - " end
-                if coeff<0 then coeff=-coeff end
+        if coeff ~= 0 then
+            if s ~= "" then
+                if coeff > 0 then s = s.." + "
+                else s = s.." - " end
+                if coeff < 0 then coeff = -coeff end
             end
-            if i==0 then s=s..coeff
-            elseif i==1 then
-                if coeff==1 then s=s.."x" else s=s..coeff.."x" end
+            if i == 0 then
+                s = s .. coeff
+            elseif i == 1 then
+                if coeff == 1 then s = s .. "x" else s = s .. coeff .. "x" end
             else
-                if coeff==1 then s=s.."x^"..i else s=s..coeff.."x^"..i end
+                if coeff == 1 then s = s .. "x^"..i else s = s .. coeff .. "x^"..i end
             end
         end
     end
-    if s=="" then s="0" end
+    if s == "" then s = "0" end
     return s
 end
 
--- Shallow copy
+-- Shallow copy table
 function copyTable(t)
-    local c={}
-    for k,v in pairs(t) do c[k]=v end
+    local c = {}
+    for k,v in pairs(t) do c[k] = v end
     return c
 end
 
--- Paper-style long division
+-- Polynomial long division: paper-style
 function longDivisionPaperStyle(num, den)
     local quotient = {}
     local remainder = copyTable(num)
     local degDen = degree(den)
-
     local steps = {}
 
-    -- Long division
+    -- Long division algorithm
     while degree(remainder) >= degDen do
         local degRem = degree(remainder)
         local leadRem = remainder[degRem]
@@ -77,34 +78,36 @@ function longDivisionPaperStyle(num, den)
         -- Multiply denominator by factor*x^expDiff
         local subtrahend = {}
         for k,v in pairs(den) do
-            subtrahend[k+expDiff] = v*factor
+            subtrahend[k + expDiff] = v * factor
         end
 
+        -- Save step for display
         table.insert(steps,{remainder=copyTable(remainder), sub=subtrahend})
 
         -- Subtract
         for k,v in pairs(subtrahend) do
             remainder[k] = (remainder[k] or 0) - v
-            if math.abs(remainder[k])<1e-10 then remainder[k]=nil end
+            if math.abs(remainder[k]) < 1e-10 then remainder[k] = nil end
         end
     end
 
-    -- Build visual layout
+    -- Visual layout
     local numStr = polyToString(num)
     local denStr = polyToString(den)
     local quotStr = polyToString(quotient)
     local line = string.rep("─", #numStr)
 
-    -- Print top: quotient
+    -- Print quotient on top
     print(string.rep(" ", #denStr + 2) .. quotStr)
-    -- Denominator with vertical bar and numerator
+    -- Denominator with vertical bar and numerator inside
     print(denStr.." |"..numStr)
     print(string.rep(" ", #denStr + 1).."|"..line)
 
-    -- Print each subtraction step aligned
+    -- Print each subtraction step
     for _, s in ipairs(steps) do
         local subStr = polyToString(s.sub)
         local remStr = polyToString(s.remainder)
+        -- Align subtraction visually
         print(string.rep(" ", #denStr + 2)..subStr)
         print(string.rep(" ", #denStr + 2)..string.rep("─", #subStr))
         print(string.rep(" ", #denStr + 2)..remStr)
@@ -114,7 +117,7 @@ function longDivisionPaperStyle(num, den)
     -- Final solution with remainder
     local quotString = polyToString(quotient)
     local remString = polyToString(remainder)
-    if remString=="0" then
+    if remString == "0" then
         print("\nFinal Solution: ("..polyToString(num)..") / ("..polyToString(den)..") = "..quotString)
     else
         print("\nFinal Solution: ("..polyToString(num)..") / ("..polyToString(den)..") = "..quotString.." + ("..remString..") / ("..polyToString(den)..")")
