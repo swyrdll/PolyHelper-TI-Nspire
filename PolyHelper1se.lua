@@ -1,91 +1,132 @@
--- TI-Nspire Lua Widget: Step-by-Step Polynomial Tool
--- Quadratic factoring + Polynomial long division
--- Fully interactive
+-- Polynomial Long Division: Paper-Style for TI-Nspire
+-- Author: ChatGPT
 
--- Functions
-function quadratic_discriminant(a,b,c)
-    return b*b - 4*a*c
-end
-
-function factor_quadratic(a,b,c, output)
-    output.text = ""
-    output.text = output.text.."Quadratic: "..a.."x^2 + "..b.."x + "..c.."\n"
-    local D = quadratic_discriminant(a,b,c)
-    output.text = output.text.."Discriminant: "..D.."\n"
-    if D < 0 then
-        output.text = output.text.."No real roots. Factorization not possible over reals.\n"
-    else
-        local sqrtD = math.sqrt(D)
-        local x1 = (-b + sqrtD)/(2*a)
-        local x2 = (-b - sqrtD)/(2*a)
-        output.text = output.text.."Roots: x1="..x1..", x2="..x2.."\n"
-        output.text = output.text.."Factored form: "..a.."*(x - "..x1..")*(x - "..x2..")\n"
+-- Parse polynomial string into a table
+function parsePolynomial(polyStr)
+    local poly = {}
+    polyStr = polyStr:gsub("%s","")
+    for term in polyStr:gmatch("[+-]?[^+-]+") do
+        local coeff, exp = term:match("([+-]?%d*)x%^?(%d*)")
+        if coeff=="" or coeff=="+" then coeff=1
+        elseif coeff=="-" then coeff=-1
+        else coeff=tonumber(coeff) end
+        if exp=="" then exp = term:find("x") and 1 or 0
+        else exp=tonumber(exp) end
+        poly[exp]=coeff
     end
+    return poly
 end
 
-function poly_division(num, den, output)
-    local r = {}
-    for i=1,#num do r[i] = num[i] end
-    local q = {}
-    local n_deg = #num - 1
-    local d_deg = #den - 1
-
-    output.text = ""
-    output.text = output.text.."Numerator: "..table.concat(num," ").."\n"
-    output.text = output.text.."Denominator: "..table.concat(den," ").."\n\n"
-
-    local step = 1
-    while #r >= #den do
-        local lead_r = r[1]
-        local lead_d = den[1]
-        local power = #r - #den
-        local term = lead_r / lead_d
-        q[#q+1] = term
-        output.text = output.text.."Step "..step..":\n"
-        output.text = output.text.."Divide leading term: "..lead_r.." / "..lead_d.." = "..term.." (x^"..power..")\n"
-        -- Subtract term*denominator
-        for i=1,#den do
-            r[i] = r[i] - term*den[i]
-        end
-        -- Remove leading zeros
-        while r[1]==0 and #r>0 do table.remove(r,1) end
-        output.text = output.text.."Remainder: "..(#r>0 and table.concat(r," ") or "0").."\n\n"
-        step = step + 1
-    end
-    output.text = output.text.."Quotient: "..table.concat(q," ").."\n"
-    output.text = output.text.."Final Remainder: "..(#r>0 and table.concat(r," ") or "0").."\n"
+-- Degree of polynomial
+function degree(poly)
+    local maxDeg=-1
+    for k,v in pairs(poly) do if v~=0 and k>maxDeg then maxDeg=k end end
+    return maxDeg
 end
 
--- GUI Setup
-function on.create(form)
-    form:setTitle("Polynomial Tool")
-    form:addLabel(10,10, "Quadratic a b c:")
-    local a_input = form:addTextField(120,10,50,25)
-    local b_input = form:addTextField(180,10,50,25)
-    local c_input = form:addTextField(240,10,50,25)
-    local quad_output = form:addTextArea(10,50,380,150)
-    local quad_button = form:addButton(10,210,150,40,"Factor Quadratic", 
-        function() 
-            local a = tonumber(a_input:text())
-            local b = tonumber(b_input:text())
-            local c = tonumber(c_input:text())
-            if a and b and c then factor_quadratic(a,b,c, quad_output) end
-        end)
-
-    form:addLabel(10,260,"Polynomial Division: Num Den (space-separated)")
-    local num_input = form:addTextField(10,290,180,25)
-    local den_input = form:addTextField(200,290,180,25)
-    local div_output = form:addTextArea(10,320,380,200)
-    local div_button = form:addButton(10,530,150,40,"Divide Polynomials",
-        function()
-            local num_text = num_input:text()
-            local den_text = den_input:text()
-            if num_text and den_text then
-                local num = {}
-                for n in string.gmatch(num_text,"%S+") do table.insert(num, tonumber(n)) end
-                local den = {}
-                for d in string.gmatch(den_text,"%S+") do table.insert(den, tonumber(d)) end
-                poly_division(num, den, div_output)
+-- Convert polynomial table to string
+function polyToString(poly)
+    local s=""
+    local deg=degree(poly)
+    for i=deg,0,-1 do
+        local coeff = poly[i] or 0
+        if coeff~=0 then
+            if s~="" then
+                if coeff>0 then s=s.." + "
+                else s=s.." - " end
+                if coeff<0 then coeff=-coeff end
             end
-        end)
+            if i==0 then s=s..coeff
+            elseif i==1 then
+                if coeff==1 then s=s.."x" else s=s..coeff.."x" end
+            else
+                if coeff==1 then s=s.."x^"..i else s=s..coeff.."x^"..i end
+            end
+        end
+    end
+    if s=="" then s="0" end
+    return s
 end
+
+-- Shallow copy
+function copyTable(t)
+    local c={}
+    for k,v in pairs(t) do c[k]=v end
+    return c
+end
+
+-- Paper-style long division
+function longDivisionPaperStyle(num, den)
+    local quotient = {}
+    local remainder = copyTable(num)
+    local degDen = degree(den)
+
+    local steps = {}
+
+    while degree(remainder) >= degDen do
+        local degRem = degree(remainder)
+        local leadRem = remainder[degRem]
+        local leadDen = den[degDen]
+        local factor = leadRem / leadDen
+        local expDiff = degRem - degDen
+        quotient[expDiff] = factor
+
+        -- Multiply denominator by factor*x^expDiff
+        local subtrahend = {}
+        for k,v in pairs(den) do
+            subtrahend[k+expDiff] = v*factor
+        end
+
+        -- Save step for display
+        table.insert(steps,{remainder=copyTable(remainder), sub=subtrahend})
+
+        -- Subtract
+        for k,v in pairs(subtrahend) do
+            remainder[k] = (remainder[k] or 0) - v
+            if math.abs(remainder[k])<1e-10 then remainder[k]=nil end
+        end
+    end
+
+    -- Build visual layout
+    local numStr = polyToString(num)
+    local denStr = polyToString(den)
+    local quotStr = polyToString(quotient)
+    local line = string.rep("─", #numStr)
+
+    -- Print top: quotient
+    print(string.rep(" ", #denStr + 2) .. quotStr)
+    -- Print denominator with vertical bar and numerator inside
+    print(denStr.." |"..numStr)
+    print(string.rep(" ", #denStr + 1).."|"..line)
+
+    -- Print each subtraction step aligned
+    local offset = 0
+    for i,s in ipairs(steps) do
+        local subStr = polyToString(s.sub)
+        local remStr = polyToString(s.remainder)
+        -- Align subtraction directly under numerator part
+        print(string.rep(" ", #denStr + 2 + offset)..subStr)
+        print(string.rep(" ", #denStr + 2 + offset)..string.rep("─", #subStr))
+        print(string.rep(" ", #denStr + 2 + offset)..remStr)
+        print("------------------------------")
+        offset = offset + 0 -- can adjust if needed to shift for next step
+    end
+
+    return quotient, remainder
+end
+
+-- Main
+function main()
+    local numerator = "2x^3 + 3x^2 - x + 5"
+    local denominator = "x^2 - 1"
+
+    local numPoly = parsePolynomial(numerator)
+    local denPoly = parsePolynomial(denominator)
+
+    local quotient, remainder = longDivisionPaperStyle(numPoly, denPoly)
+
+    print("Final Quotient: "..polyToString(quotient))
+    print("Final Remainder: "..polyToString(remainder))
+end
+
+main()
