@@ -7,36 +7,57 @@ function parsePolynomial(polyStr)
     local poly = {}
     polyStr = polyStr:gsub("%s","") -- remove spaces
     for term in polyStr:gmatch("[+-]?[^+-]+") do
-        local coeff, exp = term:match("([+-]?%d*)x%^?(%d*)")
-        if coeff=="" or coeff=="+" then coeff=1
-        elseif coeff=="-" then coeff=-1
-        else coeff=tonumber(coeff) end
-        if exp=="" then exp = term:find("x") and 1 or 0
-        else exp=tonumber(exp) end
-        poly[exp]=coeff
+        if term:find("x") then
+            -- Term contains x (variable term)
+            local coeff, exp = term:match("([+-]?%d*)x%^?(%d*)")
+            if coeff=="" or coeff=="+" then coeff=1
+            elseif coeff=="-" then coeff=-1
+            else coeff=tonumber(coeff) end
+            if exp=="" then exp=1 else exp=tonumber(exp) end
+            poly[exp]=(poly[exp] or 0)+coeff
+        else
+            -- Constant term (no x)
+            local coeff = tonumber(term)
+            if coeff then
+                poly[0]=(poly[0] or 0)+coeff
+            end
+        end
     end
     return poly
 end
 
 -- Degree of polynomial
 function degree(poly)
-    local maxDeg=-1
-    for k,v in pairs(poly) do
-        if v~=0 and k>maxDeg then maxDeg=k end
+    if not poly or type(poly) ~= "table" then
+        return -1
+    end
+    local maxDeg = -1
+    for k, v in pairs(poly) do
+        if v ~= 0 and type(k) == "number" and k > maxDeg then 
+            maxDeg = k 
+        end
     end
     return maxDeg
 end
 
--- Convert polynomial table to string safely (line 17 fixed)
+-- Convert polynomial table to string safely
 function polyToString(poly)
-    local s=""
-    local deg = degree(poly)  -- <-- safe line 17
+    if not poly or type(poly) ~= "table" then
+        return "0"
+    end
+    
+    local deg = degree(poly)
+    if deg < 0 then 
+        return "0" 
+    end
+    
+    local s = ""
     for i = deg, 0, -1 do
         local coeff = poly[i] or 0
         if coeff ~= 0 then
             if s ~= "" then
-                if coeff > 0 then s = s.." + "
-                else s = s.." - " end
+                if coeff > 0 then s = s .. " + "
+                else s = s .. " - " end
                 if coeff < 0 then coeff = -coeff end
             end
             if i == 0 then
@@ -44,7 +65,7 @@ function polyToString(poly)
             elseif i == 1 then
                 if coeff == 1 then s = s .. "x" else s = s .. coeff .. "x" end
             else
-                if coeff == 1 then s = s .. "x^"..i else s = s .. coeff .. "x^"..i end
+                if coeff == 1 then s = s .. "x^" .. i else s = s .. coeff .. "x^" .. i end
             end
         end
     end
@@ -100,17 +121,17 @@ function longDivisionPaperStyle(num, den)
     -- Print quotient on top
     print(string.rep(" ", #denStr + 2) .. quotStr)
     -- Denominator with vertical bar and numerator inside
-    print(denStr.." |"..numStr)
-    print(string.rep(" ", #denStr + 1).."|"..line)
+    print(denStr .. " |" .. numStr)
+    print(string.rep(" ", #denStr + 1) .. "|" .. line)
 
     -- Print each subtraction step
     for _, s in ipairs(steps) do
         local subStr = polyToString(s.sub)
         local remStr = polyToString(s.remainder)
         -- Align subtraction visually
-        print(string.rep(" ", #denStr + 2)..subStr)
-        print(string.rep(" ", #denStr + 2)..string.rep("─", #subStr))
-        print(string.rep(" ", #denStr + 2)..remStr)
+        print(string.rep(" ", #denStr + 2) .. subStr)
+        print(string.rep(" ", #denStr + 2) .. string.rep("─", #subStr))
+        print(string.rep(" ", #denStr + 2) .. remStr)
         print("------------------------------")
     end
 
@@ -118,9 +139,9 @@ function longDivisionPaperStyle(num, den)
     local quotString = polyToString(quotient)
     local remString = polyToString(remainder)
     if remString == "0" then
-        print("\nFinal Solution: ("..polyToString(num)..") / ("..polyToString(den)..") = "..quotString)
+        print("\nFinal Solution: (" .. polyToString(num) .. ") / (" .. polyToString(den) .. ") = " .. quotString)
     else
-        print("\nFinal Solution: ("..polyToString(num)..") / ("..polyToString(den)..") = "..quotString.." + ("..remString..") / ("..polyToString(den)..")")
+        print("\nFinal Solution: (" .. polyToString(num) .. ") / (" .. polyToString(den) .. ") = " .. quotString .. " + (" .. remString .. ") / (" .. polyToString(den) .. ")")
     end
 
     return quotient, remainder
