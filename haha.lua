@@ -1,6 +1,5 @@
--- Polynomial Long Division: Paper-Style with Final Solution
+-- Polynomial Long Division: Fixed Lua version
 -- TI-Nspire Lua Script
--- Author: ChatGPT
 
 -- Parse polynomial string into table
 function parsePolynomial(polyStr)
@@ -21,7 +20,9 @@ end
 -- Degree of polynomial
 function degree(poly)
     local maxDeg=-1
-    for k,v in pairs(poly) do if v~=0 and k>maxDeg then maxDeg=k end end
+    for k,v in pairs(poly) do
+        if v~=0 and k>maxDeg then maxDeg=k end
+    end
     return maxDeg
 end
 
@@ -64,7 +65,7 @@ function longDivisionPaperStyle(num, den)
 
     local steps = {}
 
-    -- Long division algorithm
+    -- Long division
     while degree(remainder) >= degDen do
         local degRem = degree(remainder)
         local leadRem = remainder[degRem]
@@ -100,8 +101,8 @@ function longDivisionPaperStyle(num, den)
     print(denStr.." |"..numStr)
     print(string.rep(" ", #denStr + 1).."|"..line)
 
-    -- Print each subtraction step
-    for i,s in ipairs(steps) do
+    -- Print each subtraction step aligned
+    for _, s in ipairs(steps) do
         local subStr = polyToString(s.sub)
         local remStr = polyToString(s.remainder)
         print(string.rep(" ", #denStr + 2)..subStr)
@@ -110,10 +111,10 @@ function longDivisionPaperStyle(num, den)
         print("------------------------------")
     end
 
-    -- Print final solution in one equation
+    -- Final solution with remainder
     local quotString = polyToString(quotient)
     local remString = polyToString(remainder)
-    if remString == "0" then
+    if remString=="0" then
         print("\nFinal Solution: ("..polyToString(num)..") / ("..polyToString(den)..") = "..quotString)
     else
         print("\nFinal Solution: ("..polyToString(num)..") / ("..polyToString(den)..") = "..quotString.." + ("..remString..") / ("..polyToString(den)..")")
